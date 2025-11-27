@@ -1,0 +1,15 @@
+# Habilitar URL amigables
+RewriteEngine On
+RewriteBase /rueda-negocios-arica/
+
+# Redirigir errores 404
+ErrorDocument 404 /rueda-negocios-arica/views/404.php
+
+# Bloquear acceso a archivos sensibles
+<FilesMatch "\.(env|sql|log|ini)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Bloquear navegación de directorios
+Options -Indexes
