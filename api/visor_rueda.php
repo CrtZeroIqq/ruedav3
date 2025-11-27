@@ -19,30 +19,34 @@ try {
     );
     $stmtActivo->execute();
     $bloqueObjetivo = $stmtActivo->fetch();
-    $estadoBloque = 'sin_bloque';
     $infoBloque = null;
 
-    if ($bloqueObjetivo) {
-        $estadoBloque = 'activo';
-    } else {
-        // Buscar siguiente bloque programado
-        $stmtProximo = $pdo->prepare(
-            "SELECT * FROM bloques_horarios_globales
-             WHERE fecha >= CURDATE()
-             AND (fecha > CURDATE() OR hora_inicio > CURTIME())
-             ORDER BY fecha ASC, hora_inicio ASC
-             LIMIT 1"
-        );
-        $stmtProximo->execute();
-        $bloqueObjetivo = $stmtProximo->fetch();
-        if ($bloqueObjetivo) {
-            $estadoBloque = 'proximo';
-        }
-    }
+    // Obtener siguiente bloque (útil para la fase de relocalización)
+    $stmtProximo = $pdo->prepare(
+        "SELECT * FROM bloques_horarios_globales
+         WHERE (fecha > CURDATE())
+            OR (fecha = CURDATE() AND hora_inicio > CURTIME())
+         ORDER BY fecha ASC, hora_inicio ASC
+         LIMIT 1"
+    );
+    $stmtProximo->execute();
+    $siguienteBloque = $stmtProximo->fetch();
 
     if ($bloqueObjetivo) {
         $inicio = new DateTime($bloqueObjetivo['fecha'] . ' ' . $bloqueObjetivo['hora_inicio']);
         $fin = new DateTime($bloqueObjetivo['fecha'] . ' ' . $bloqueObjetivo['hora_fin']);
+
+        $fase = 'reunion';
+        $segundosFase = max(0, $fin->getTimestamp() - $ahora->getTimestamp());
+
+        if ($segundosFase <= 0 && $siguienteBloque) {
+            $fase = 'relocalizacion';
+            $proximoInicio = new DateTime($siguienteBloque['fecha'] . ' ' . $siguienteBloque['hora_inicio']);
+            $segundosFase = max(0, $proximoInicio->getTimestamp() - $ahora->getTimestamp());
+        } elseif ($segundosFase <= 0) {
+            $fase = 'finalizado';
+            $segundosFase = 0;
+        }
 
         $infoBloque = [
             'id' => (int) $bloqueObjetivo['id'],
@@ -50,12 +54,11 @@ try {
             'hora_inicio' => substr($bloqueObjetivo['hora_inicio'], 0, 5),
             'hora_fin' => substr($bloqueObjetivo['hora_fin'], 0, 5),
             'orden' => (int) $bloqueObjetivo['orden'],
-            'estado' => $estadoBloque,
-            'minutos_restantes' => $estadoBloque === 'activo'
-                ? max(0, floor(($fin->getTimestamp() - $ahora->getTimestamp()) / 60))
-                : null,
-            'minutos_para_inicio' => $estadoBloque === 'proximo'
-                ? max(0, floor(($inicio->getTimestamp() - $ahora->getTimestamp()) / 60))
+            'estado' => 'activo',
+            'fase' => $fase,
+            'segundos_fase' => $segundosFase,
+            'siguiente_bloque_inicio' => $siguienteBloque
+                ? ($siguienteBloque['fecha'] . ' ' . substr($siguienteBloque['hora_inicio'], 0, 5))
                 : null,
         ];
     }

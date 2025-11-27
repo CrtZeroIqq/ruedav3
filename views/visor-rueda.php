@@ -12,20 +12,29 @@ require_once '../config/config.php';
 </head>
 <body class="bg-slate-950 text-white min-h-screen">
     <header class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-lg">
-        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm uppercase tracking-wide text-white/70">Rueda de Negocios</p>
-                <h1 class="text-3xl font-extrabold flex items-center gap-2">
-                    <i class="fas fa-display"></i>
-                    Visor de Mesas en Vivo
-                </h1>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="bg-black/20 rounded-lg px-4 py-2 text-sm text-white/80">
-                    <span class="font-semibold" id="reloj-actual">--:--:--</span>
-                    <span class="ml-2 text-white/60">Hora del servidor</span>
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm uppercase tracking-wide text-white/70">Rueda de Negocios</p>
+                    <h1 class="text-3xl font-extrabold flex items-center gap-2">
+                        <i class="fas fa-display"></i>
+                        Visor de Mesas en Vivo
+                    </h1>
                 </div>
-                <div class="bg-white/10 border border-white/10 rounded-lg px-4 py-2 text-sm text-white/90" id="estado-bloque">Sin bloque activo</div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-black/20 rounded-lg px-4 py-2 text-sm text-white/80">
+                        <span class="font-semibold" id="reloj-actual">--:--:--</span>
+                        <span class="ml-2 text-white/60">Hora del servidor</span>
+                    </div>
+                    <div class="bg-white/10 border border-white/10 rounded-lg px-4 py-2 text-sm text-white/90" id="estado-bloque">Sin bloque activo</div>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-white/80">Inicie el control para sincronizar el cronómetro con la base de datos y monitorear solo el bloque en curso.</p>
+                <button id="btn-iniciar" class="inline-flex items-center gap-2 bg-white text-indigo-700 font-semibold px-4 py-2 rounded-lg shadow hover:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i class="fas fa-play"></i>
+                    Iniciar rueda
+                </button>
             </div>
         </div>
     </header>
@@ -59,9 +68,12 @@ require_once '../config/config.php';
             </div>
             <div class="bg-slate-900 border border-white/5 rounded-xl p-4 shadow-md">
                 <p class="text-sm text-white/60">Tiempo</p>
-                <div class="mt-2 flex items-center gap-3">
-                    <div class="bg-emerald-500/15 border border-emerald-400/30 text-emerald-100 px-3 py-2 rounded-lg" id="contador-tiempo">--</div>
-                    <p class="text-white/60 text-sm" id="mensaje-tiempo">Esperando bloque...</p>
+                <div class="mt-3 flex flex-col gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-emerald-500/15 border border-emerald-400/30 text-emerald-100 px-3 py-2 rounded-lg min-w-[120px] text-center" id="contador-tiempo">--:--</div>
+                        <p class="text-white/60 text-sm" id="mensaje-tiempo">Esperando bloque...</p>
+                    </div>
+                    <div class="text-xs text-white/50" id="proximo-bloque"></div>
                 </div>
             </div>
         </section>
@@ -70,7 +82,7 @@ require_once '../config/config.php';
             <div class="border-b border-white/5 px-6 py-4 flex items-center justify-between bg-white/5">
                 <div>
                     <h2 class="text-xl font-semibold">Mesas en este bloque</h2>
-                    <p class="text-sm text-white/60">Actualización automática cada 15 segundos</p>
+                    <p class="text-sm text-white/60">Solo se muestran las mesas del bloque en curso</p>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-white/70" id="ultima-actualizacion">
                     <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
@@ -90,6 +102,13 @@ require_once '../config/config.php';
     <script>
         const contenedorMesas = document.getElementById('contenedor-mesas');
         const loader = document.getElementById('loader');
+        const btnIniciar = document.getElementById('btn-iniciar');
+
+        let ruedaIniciada = false;
+        let intervaloDatos = null;
+        let intervaloReloj = null;
+        let datosCache = null;
+        let desfaseServidor = 0;
 
         function badgeEstado(estado) {
             if (estado === 'confirmada') {
@@ -155,16 +174,26 @@ require_once '../config/config.php';
 
         function actualizarCabecera(datos) {
             const bloque = datos.bloque;
+            if (datos.ahora) {
+                const partes = datos.ahora.split(':');
+                const ahoraServidor = new Date();
+                ahoraServidor.setHours(parseInt(partes[0], 10), parseInt(partes[1], 10), parseInt(partes[2], 10), 0);
+                desfaseServidor = ahoraServidor.getTime() - Date.now();
+            }
+
             document.getElementById('reloj-actual').textContent = datos.ahora || '--:--:--';
             document.getElementById('ultima-actualizacion').querySelector('span:nth-child(2)').textContent = new Date().toLocaleTimeString();
 
             if (!bloque) {
-                document.getElementById('estado-bloque').textContent = 'Sin bloques programados';
+                document.getElementById('estado-bloque').textContent = 'Sin bloque activo';
                 document.getElementById('bloque-horario').textContent = '--:-- - --:--';
                 document.getElementById('bloque-orden').textContent = '#--';
                 document.getElementById('bloque-fecha').textContent = '--';
-                document.getElementById('contador-tiempo').textContent = '--';
-                document.getElementById('mensaje-tiempo').textContent = 'Esperando programación...';
+                document.getElementById('contador-tiempo').textContent = '--:--';
+                document.getElementById('mensaje-tiempo').textContent = ruedaIniciada ? 'Esperando próximo bloque activo' : 'Presiona iniciar para comenzar';
+                document.getElementById('proximo-bloque').textContent = '';
+                contenedorMesas.innerHTML = '<div class="col-span-full text-center text-white/60">No hay bloque en curso en este momento.</div>';
+                datosCache = null;
                 return;
             }
 
@@ -172,19 +201,20 @@ require_once '../config/config.php';
             document.getElementById('bloque-orden').textContent = `#${bloque.orden}`;
             document.getElementById('bloque-fecha').textContent = bloque.fecha;
 
-            if (bloque.estado === 'activo') {
-                document.getElementById('estado-bloque').innerHTML = '<span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/40">Bloque en curso</span>';
-                document.getElementById('contador-tiempo').textContent = `${bloque.minutos_restantes} min restantes`;
-                document.getElementById('mensaje-tiempo').textContent = 'Supervisar tiempos para cierre de reuniones';
-            } else {
-                document.getElementById('estado-bloque').innerHTML = '<span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-100 border border-amber-400/40">Próximo bloque</span>';
-                document.getElementById('contador-tiempo').textContent = `${bloque.minutos_para_inicio} min para iniciar`;
-                document.getElementById('mensaje-tiempo').textContent = 'Preparar mesas para el siguiente bloque';
-            }
+            document.getElementById('estado-bloque').innerHTML = '<span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/40">Bloque en curso</span>';
+            document.getElementById('mensaje-tiempo').textContent = bloque.fase === 'reunion'
+                ? '15 minutos de reunión en progreso'
+                : bloque.fase === 'relocalizacion'
+                    ? '5 minutos para relocalización de empresas'
+                    : 'Bloque finalizado';
+            document.getElementById('proximo-bloque').textContent = bloque.siguiente_bloque_inicio
+                ? `Próximo bloque: ${bloque.siguiente_bloque_inicio}`
+                : '';
 
             document.getElementById('mesas-ocupadas').textContent = datos.estadisticas.mesas_ocupadas;
             document.getElementById('mesas-libres').textContent = datos.estadisticas.mesas_libres;
             document.getElementById('total-mesas').textContent = datos.estadisticas.total_mesas;
+            datosCache = datos;
         }
 
         async function cargarDatos() {
@@ -198,7 +228,7 @@ require_once '../config/config.php';
                 }
 
                 loader.classList.add('hidden');
-                renderMesas(datos.mesas);
+                renderMesas(datos.bloque ? datos.mesas : []);
                 actualizarCabecera(datos);
             } catch (error) {
                 loader.innerHTML = '<p class="text-red-300">Error de conexión con el visor.</p>';
@@ -206,8 +236,41 @@ require_once '../config/config.php';
             }
         }
 
-        cargarDatos();
-        setInterval(cargarDatos, 15000);
+        function actualizarTemporizador() {
+            if (!datosCache || !datosCache.bloque) {
+                document.getElementById('contador-tiempo').textContent = '--:--';
+                return;
+            }
+
+            const bloque = datosCache.bloque;
+            const ahora = new Date(Date.now() + desfaseServidor);
+            let finFase;
+
+            if (bloque.fase === 'reunion') {
+                finFase = new Date(`${bloque.fecha}T${bloque.hora_fin}:00`);
+            } else if (bloque.fase === 'relocalizacion' && bloque.siguiente_bloque_inicio) {
+                finFase = new Date(bloque.siguiente_bloque_inicio.replace(' ', 'T') + ':00');
+            } else {
+                finFase = ahora;
+            }
+
+            const restantes = Math.max(0, Math.floor((finFase.getTime() - ahora.getTime()) / 1000));
+            const minutos = String(Math.floor(restantes / 60)).padStart(2, '0');
+            const segundos = String(restantes % 60).padStart(2, '0');
+            document.getElementById('contador-tiempo').textContent = `${minutos}:${segundos}`;
+        }
+
+        function iniciarRueda() {
+            if (ruedaIniciada) return;
+            ruedaIniciada = true;
+            btnIniciar.disabled = true;
+            btnIniciar.innerHTML = '<i class="fas fa-check"></i> Rueda en curso';
+            cargarDatos();
+            intervaloDatos = setInterval(cargarDatos, 5000);
+            intervaloReloj = setInterval(actualizarTemporizador, 1000);
+        }
+
+        btnIniciar.addEventListener('click', iniciarRueda);
     </script>
 </body>
 </html>
