@@ -159,9 +159,15 @@ if (isLoggedIn()) {
                     Sistema de Gestión de Reuniones Empresariales
                 </p>
                 <p class="text-sm text-gray-700">
-                    ¿No tienes cuenta? 
+                    ¿No tienes cuenta?
                     <a href="registro.php" class="font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors">
                         <i class="fas fa-user-plus mr-1"></i>Registrar mi empresa
+                    </a>
+                </p>
+                <p class="text-sm text-gray-600 mt-2">
+                    ¿Solo quieres ver cómo se ve el panel?
+                    <a href="demo.php" class="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">
+                        <i class="fas fa-eye mr-1"></i>Ver demo del dashboard
                     </a>
                 </p>
             </div>
