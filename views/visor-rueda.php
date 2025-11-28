@@ -264,7 +264,7 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                 <div class="text-xl font-bold text-blue-600" id="total-mesas">15</div>
             </div>
             <div class="bg-white rounded-lg shadow p-3 stat-card">
-                <div class="text-gray-500 text-xs">Empresas</div>
+                <div class="text-gray-500 text-xs">Empresas Activas</div>
                 <div class="text-xl font-bold text-gray-700" id="total-empresas">0</div>
             </div>
             <div class="bg-white rounded-lg shadow p-3 stat-card">
@@ -416,9 +416,21 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
 
         // Actualizar toda la interfaz
         function actualizarInterfaz(data) {
+            // Calcular empresas activas (con disponibilidad o reuniones)
+            const empresasActivas = data.empresas.filter(empresa => {
+                const filaEmpresa = data.matriz[empresa.id];
+                for (let mesa = 1; mesa <= 15; mesa++) {
+                    const celda = filaEmpresa[mesa];
+                    if (celda.estado === 'disponible' || celda.estado === 'confirmada' || celda.estado === 'pendiente') {
+                        return true;
+                    }
+                }
+                return false;
+            });
+
             // Estadísticas
             document.getElementById('total-mesas').textContent = data.estadisticas.total_mesas;
-            document.getElementById('total-empresas').textContent = data.estadisticas.total_empresas;
+            document.getElementById('total-empresas').textContent = empresasActivas.length + ' / ' + data.estadisticas.total_empresas;
             document.getElementById('slots-disponibles').textContent = data.estadisticas.slots_disponibles;
             document.getElementById('slots-ocupados').textContent = data.estadisticas.slots_ocupados;
             document.getElementById('porcentaje-ocupacion').textContent = data.estadisticas.porcentaje_ocupacion + '%';
@@ -461,9 +473,22 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
             headerHTML += '</tr>';
             header.innerHTML = headerHTML;
 
-            // Cuerpo: Una fila por empresa
+            // Filtrar empresas que tienen actividad (disponibilidad o reuniones)
+            const empresasActivas = data.empresas.filter(empresa => {
+                const filaEmpresa = data.matriz[empresa.id];
+                // Verificar si tiene al menos una mesa disponible o con reunión
+                for (let mesa = 1; mesa <= 15; mesa++) {
+                    const celda = filaEmpresa[mesa];
+                    if (celda.estado === 'disponible' || celda.estado === 'confirmada' || celda.estado === 'pendiente') {
+                        return true; // Esta empresa tiene actividad
+                    }
+                }
+                return false; // No tiene ninguna actividad
+            });
+
+            // Cuerpo: Una fila por empresa (solo las activas)
             let bodyHTML = '';
-            data.empresas.forEach(empresa => {
+            empresasActivas.forEach(empresa => {
                 bodyHTML += '<tr>';
 
                 // Columna de empresa
