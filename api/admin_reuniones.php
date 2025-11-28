@@ -439,9 +439,26 @@ function reprogramarReunion($reunionId, $datos, $pdo) {
         $stmt->execute([$reunion['empresa_a_id'], $nuevoBloqueId]);
         $mesaNueva = $stmt->fetchColumn();
 
+        // Si no existe disponibilidad, usar la mesa actual de la reunión (o una disponible) y crearla al vuelo
         if (!$mesaNueva) {
-            $pdo->rollBack();
-            jsonResponse(false, 'La empresa demandante no tiene disponibilidad en el nuevo horario');
+            $mesaPreferida = $reunion['mesa_asignada'] ?? 1;
+
+            // Validar que la mesa no esté asignada a otra empresa en el bloque
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM disponibilidad_empresas WHERE bloque_id = ? AND mesa_numero = ?");
+            $stmt->execute([$nuevoBloqueId, $mesaPreferida]);
+
+            if ($stmt->fetchColumn() > 0) {
+                $pdo->rollBack();
+                jsonResponse(false, 'La mesa seleccionada ya está asignada en este bloque');
+            }
+
+            // Crear disponibilidad automáticamente para la empresa
+            $stmt = $pdo->prepare("
+                INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, mesa_numero, disponible)
+                VALUES (?, ?, ?, 1)
+            ");
+            $stmt->execute([$reunion['empresa_a_id'], $nuevoBloqueId, $mesaPreferida]);
+            $mesaNueva = $mesaPreferida;
         }
 
         // Verificar que no haya conflicto
