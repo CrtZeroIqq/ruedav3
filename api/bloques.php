@@ -25,7 +25,8 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             de.mesa_numero,
-            de.bloque_id,
+            de.bloque_id as id,
+            de.bloque_id as bloque_id,
             bg.fecha,
             bg.hora_inicio,
             bg.hora_fin,
@@ -63,6 +64,7 @@ try {
         $stmt = $pdo->prepare("
             SELECT
                 :mesa_preferida as mesa_numero,
+                bg.id as id,
                 bg.id as bloque_id,
                 bg.fecha,
                 bg.hora_inicio,
