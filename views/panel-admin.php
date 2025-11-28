@@ -710,6 +710,143 @@ require_once '../includes/header.php';
                             </div>
                         </form>
 
+                        <!-- Listado de Reuniones Agendadas -->
+                        <div class="mt-8">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-900">
+                                    <i class="fas fa-list-ul mr-2 text-purple-600"></i>Reuniones Agendadas Recientemente
+                                </h3>
+                                <button onclick="recargarReunionesAgendadas()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition">
+                                    <i class="fas fa-sync-alt mr-1"></i>Actualizar
+                                </button>
+                            </div>
+
+                            <div id="listaReunionesAgendadas" class="space-y-3">
+                                <?php
+                                // Obtener últimas 10 reuniones creadas
+                                $stmtRecientes = $pdo->query("
+                                    SELECT
+                                        r.*,
+                                        ea.nombre as empresa_a_nombre,
+                                        eb.nombre as empresa_b_nombre,
+                                        bg.hora_inicio,
+                                        bg.hora_fin,
+                                        bg.orden
+                                    FROM reuniones r
+                                    INNER JOIN empresas ea ON r.empresa_a_id = ea.id
+                                    INNER JOIN empresas eb ON r.empresa_b_id = eb.id
+                                    INNER JOIN bloques_horarios_globales bg ON r.bloque_global_id = bg.id
+                                    ORDER BY r.fecha_solicitud DESC
+                                    LIMIT 10
+                                ");
+                                $reunionesRecientes = $stmtRecientes->fetchAll();
+
+                                if (count($reunionesRecientes) > 0):
+                                    foreach ($reunionesRecientes as $reunion):
+                                        $estadoClasses = [
+                                            'pendiente' => 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                                            'confirmada' => 'bg-green-100 text-green-800 border-green-300',
+                                            'rechazada' => 'bg-red-100 text-red-800 border-red-300',
+                                            'cancelada' => 'bg-gray-100 text-gray-800 border-gray-300'
+                                        ];
+                                        $estadoClass = $estadoClasses[$reunion['estado']] ?? 'bg-gray-100';
+
+                                        $estadoIconos = [
+                                            'pendiente' => 'fas fa-clock',
+                                            'confirmada' => 'fas fa-check-circle',
+                                            'rechazada' => 'fas fa-times-circle',
+                                            'cancelada' => 'fas fa-ban'
+                                        ];
+                                        $estadoIcono = $estadoIconos[$reunion['estado']] ?? 'fas fa-question-circle';
+                                ?>
+                                    <div class="bg-white border-2 border-gray-200 rounded-lg p-4 hover:shadow-md transition reunion-item" data-reunion-id="<?php echo $reunion['id']; ?>">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-3 mb-2">
+                                                    <span class="px-3 py-1 rounded-full text-xs font-semibold border-2 <?php echo $estadoClass; ?>">
+                                                        <i class="<?php echo $estadoIcono; ?> mr-1"></i><?php echo strtoupper($reunion['estado']); ?>
+                                                    </span>
+                                                    <span class="text-xs text-gray-500">
+                                                        <i class="fas fa-clock mr-1"></i>
+                                                        <?php echo date('d/m/Y H:i', strtotime($reunion['fecha_solicitud'])); ?>
+                                                    </span>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-4 mb-2">
+                                                    <div>
+                                                        <div class="text-xs text-gray-500 mb-1">
+                                                            <i class="fas fa-building text-blue-600"></i> Empresa Demandante
+                                                        </div>
+                                                        <div class="font-bold text-gray-800"><?php echo htmlspecialchars($reunion['empresa_a_nombre']); ?></div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-xs text-gray-500 mb-1">
+                                                            <i class="fas fa-handshake text-green-600"></i> Empresa Oferente
+                                                        </div>
+                                                        <div class="font-bold text-gray-800"><?php echo htmlspecialchars($reunion['empresa_b_nombre']); ?></div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-center gap-4 text-sm text-gray-600">
+                                                    <span>
+                                                        <i class="fas fa-clock text-purple-600"></i>
+                                                        <?php echo date('H:i', strtotime($reunion['hora_inicio'])); ?> - <?php echo date('H:i', strtotime($reunion['hora_fin'])); ?>
+                                                    </span>
+                                                    <?php if ($reunion['mesa_asignada']): ?>
+                                                        <span>
+                                                            <i class="fas fa-table-cells text-orange-600"></i>
+                                                            Mesa <?php echo $reunion['mesa_asignada']; ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <span class="text-xs text-gray-400">
+                                                        ID: #<?php echo $reunion['id']; ?>
+                                                    </span>
+                                                </div>
+
+                                                <?php if (!empty($reunion['notas'])): ?>
+                                                    <div class="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                                        <i class="fas fa-sticky-note mr-1"></i>
+                                                        <?php echo nl2br(htmlspecialchars(substr($reunion['notas'], 0, 100))); ?>
+                                                        <?php if (strlen($reunion['notas']) > 100): ?>...<?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <div class="ml-4 flex flex-col gap-2">
+                                                <button onclick="verDetalleReunion(<?php echo $reunion['id']; ?>)"
+                                                        class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs transition">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <?php if ($reunion['estado'] === 'pendiente'): ?>
+                                                    <button onclick="eliminarReunion(<?php echo $reunion['id']; ?>)"
+                                                            class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs transition">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php
+                                    endforeach;
+                                else:
+                                ?>
+                                    <div class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                                        <p>No hay reuniones agendadas aún</p>
+                                        <p class="text-sm mt-1">Usa el formulario arriba para crear la primera reunión</p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <?php if (count($reunionesRecientes) >= 10): ?>
+                                <div class="text-center mt-4">
+                                    <a href="#tab-reuniones" onclick="cambiarTab('reuniones')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                        Ver todas las reuniones →
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
                         <div id="disponibilidadInfo" class="mt-6 hidden">
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <h4 class="font-bold text-blue-900 mb-2">
@@ -1529,9 +1666,8 @@ document.getElementById('formCrearReunion')?.addEventListener('submit', function
             alert('✓ ' + data.message);
             this.reset();
             document.getElementById('disponibilidadInfo').classList.add('hidden');
-            // Opcional: redirigir al tab de reuniones
-            switchTab('reuniones');
-            setTimeout(() => location.reload(), 500);
+            // Recargar lista de reuniones agendadas
+            recargarReunionesAgendadas();
         } else {
             alert('✗ ' + data.message);
         }
@@ -1541,6 +1677,63 @@ document.getElementById('formCrearReunion')?.addEventListener('submit', function
         console.error(error);
     });
 });
+
+// Función para recargar reuniones agendadas
+function recargarReunionesAgendadas() {
+    const container = document.getElementById('listaReunionesAgendadas');
+    if (!container) return;
+
+    // Mostrar indicador de carga
+    container.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-3xl text-blue-600"></i><p class="mt-2 text-gray-600">Actualizando...</p></div>';
+
+    // Recargar la página para obtener los datos actualizados
+    setTimeout(() => location.reload(), 500);
+}
+
+// Función para eliminar una reunión
+function eliminarReunion(reunionId) {
+    if (!confirm('¿Está seguro de eliminar esta reunión? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('accion', 'eliminar_reunion');
+    formData.append('reunion_id', reunionId);
+
+    fetch('<?php echo BASE_URL; ?>api/admin_reuniones.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✓ Reunión eliminada correctamente');
+            recargarReunionesAgendadas();
+        } else {
+            alert('✗ ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('✗ Error de conexión');
+        console.error(error);
+    });
+}
+
+// Función para ver detalle de reunión
+function verDetalleReunion(reunionId) {
+    // Redirigir al tab de reuniones y enfocar esa reunión
+    switchTab('reuniones');
+    setTimeout(() => {
+        const reunionElement = document.querySelector(`[data-reunion-id="${reunionId}"]`);
+        if (reunionElement) {
+            reunionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            reunionElement.classList.add('ring-4', 'ring-blue-400');
+            setTimeout(() => {
+                reunionElement.classList.remove('ring-4', 'ring-blue-400');
+            }, 2000);
+        }
+    }, 300);
+}
 
 // Inicializar
 document.addEventListener('DOMContentLoaded', function() {

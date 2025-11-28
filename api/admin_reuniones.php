@@ -67,6 +67,12 @@ try {
             crearReunionAdmin($_POST, $pdo);
             break;
 
+        case 'eliminar_reunion':
+            $reunionId = intval($_POST['reunion_id'] ?? 0);
+            if ($reunionId <= 0) jsonResponse(false, 'ID de reunión inválido');
+            eliminarReunion($reunionId, $pdo);
+            break;
+
         default:
             jsonResponse(false, 'Acción no válida');
     }
@@ -192,9 +198,9 @@ function liberarSlot($datos, $pdo) {
         // Eliminar disponibilidad
         $stmt = $pdo->prepare("
             DELETE FROM disponibilidad_empresas
-            WHERE empresa_id = ? AND bloque_id = ? AND mesa_numero = ?
+            WHERE empresa_id = ? AND bloque_id = ?
         ");
-        $stmt->execute([$empresaId, $bloqueId, $mesa]);
+        $stmt->execute([$empresaId, $bloqueId]);
 
         $pdo->commit();
 
@@ -234,22 +240,22 @@ function asignarSlot($datos, $pdo) {
             jsonResponse(false, 'Empresa no encontrada o no es demandante');
         }
 
-        // Verificar que el slot no esté ocupado
+        // Verificar que la empresa no tenga ya disponibilidad en este bloque
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM disponibilidad_empresas
-            WHERE mesa_numero = ? AND bloque_id = ?
+            WHERE empresa_id = ? AND bloque_id = ?
         ");
-        $stmt->execute([$mesa, $bloqueId]);
+        $stmt->execute([$empresaId, $bloqueId]);
         if ($stmt->fetchColumn() > 0) {
-            jsonResponse(false, 'El slot ya está ocupado');
+            jsonResponse(false, 'La empresa ya tiene disponibilidad en este bloque');
         }
 
         // Insertar disponibilidad
         $stmt = $pdo->prepare("
-            INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, mesa_numero, disponible, created_at)
-            VALUES (?, ?, ?, 1, NOW())
+            INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, disponible)
+            VALUES (?, ?, 1)
         ");
-        $stmt->execute([$empresaId, $bloqueId, $mesa]);
+        $stmt->execute([$empresaId, $bloqueId]);
 
         jsonResponse(true, 'Slot asignado exitosamente');
 
@@ -315,20 +321,20 @@ function crearReunionAdmin($datos, $pdo) {
             jsonResponse(false, 'Ya existe una reunión confirmada en este horario/mesa');
         }
 
-        // Si no existe disponibilidad para esta empresa en este slot, crearla
+        // Si no existe disponibilidad para esta empresa en este bloque, crearla
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM disponibilidad_empresas
-            WHERE empresa_id = ? AND bloque_id = ? AND mesa_numero = ?
+            WHERE empresa_id = ? AND bloque_id = ?
         ");
-        $stmt->execute([$empresaAId, $bloqueId, $mesaNumero]);
+        $stmt->execute([$empresaAId, $bloqueId]);
 
         if ($stmt->fetchColumn() == 0) {
             // Crear disponibilidad automáticamente
             $stmt = $pdo->prepare("
-                INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, mesa_numero, disponible, created_at)
-                VALUES (?, ?, ?, 1, NOW())
+                INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, disponible)
+                VALUES (?, ?, 1)
             ");
-            $stmt->execute([$empresaAId, $bloqueId, $mesaNumero]);
+            $stmt->execute([$empresaAId, $bloqueId]);
         }
 
         // Crear la reunión
@@ -456,6 +462,38 @@ function reprogramarReunion($reunionId, $datos, $pdo) {
         $pdo->rollBack();
         error_log("Error al reprogramar reunión: " . $e->getMessage());
         jsonResponse(false, 'Error al reprogramar la reunión');
+    }
+}
+
+/**
+ * Eliminar una reunión
+ */
+function eliminarReunion($reunionId, $pdo) {
+    try {
+        $pdo->beginTransaction();
+
+        // Verificar que la reunión exista
+        $stmt = $pdo->prepare("SELECT * FROM reuniones WHERE id = ?");
+        $stmt->execute([$reunionId]);
+        $reunion = $stmt->fetch();
+
+        if (!$reunion) {
+            $pdo->rollBack();
+            jsonResponse(false, 'Reunión no encontrada');
+        }
+
+        // Eliminar la reunión
+        $stmt = $pdo->prepare("DELETE FROM reuniones WHERE id = ?");
+        $stmt->execute([$reunionId]);
+
+        $pdo->commit();
+
+        jsonResponse(true, 'Reunión eliminada exitosamente');
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Error al eliminar reunión: " . $e->getMessage());
+        jsonResponse(false, 'Error al eliminar la reunión');
     }
 }
 
