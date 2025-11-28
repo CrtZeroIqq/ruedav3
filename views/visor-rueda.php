@@ -19,136 +19,178 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         :root {
             --color-disponible: #10b981;
-            --color-ocupado: #6b7280;
-            --color-confirmada: #3b82f6;
+            --color-ocupado: #3b82f6;
             --color-pendiente: #f59e0b;
-            --color-no-disponible: #e5e7eb;
+            --bg-primary: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
         }
 
         body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 14px;
+            background: var(--bg-primary);
         }
 
         .tabla-mesas {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            font-size: 12px;
+            font-size: 13px;
         }
 
         .tabla-mesas th,
         .tabla-mesas td {
-            border: 1px solid #d1d5db;
-            padding: 8px 4px;
+            border: none;
+            padding: 12px 8px;
             text-align: center;
             vertical-align: middle;
         }
 
         .mesa-header {
-            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
-            color: white;
-            font-weight: bold;
-            font-size: 13px;
-            padding: 12px 4px;
-            min-width: 65px;
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+            color: #475569;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 16px 8px;
+            min-width: 70px;
             position: sticky;
             top: 0;
             z-index: 20;
+            border-bottom: 2px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .mesa-header i {
+            display: block;
+            margin-bottom: 4px;
+            color: #3b82f6;
+            font-size: 14px;
         }
 
         .empresa-cell {
-            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            background: linear-gradient(90deg, #334155 0%, #475569 100%);
             color: white;
             font-weight: 600;
-            font-size: 12px;
-            padding: 10px 8px;
-            min-width: 180px;
-            max-width: 200px;
+            font-size: 13px;
+            padding: 14px 12px;
+            min-width: 200px;
+            max-width: 220px;
             position: sticky;
             left: 0;
             z-index: 15;
             text-align: left;
+            border-right: 3px solid #1e293b;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
         }
 
         .celda-disponible {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
+            background: #ecfdf5;
+            color: #047857;
             cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 65px;
-            height: 70px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 70px;
+            height: 75px;
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+            border: 2px solid #d1fae5;
+            border-radius: 6px;
         }
 
         .celda-disponible:hover {
-            transform: scale(1.08);
+            background: #d1fae5;
+            transform: translateY(-2px);
             z-index: 5;
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
         }
 
         .celda-ocupada {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1e40af;
             cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 65px;
-            height: 70px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 70px;
+            height: 75px;
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+            border: 2px solid #bfdbfe;
+            border-radius: 6px;
         }
 
         .celda-ocupada:hover {
-            transform: scale(1.08);
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            transform: translateY(-2px);
             z-index: 5;
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
         }
 
         .celda-pendiente {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #92400e;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+            border: 2px solid #fde68a;
+            border-radius: 6px;
+            min-width: 70px;
+            height: 75px;
         }
 
         .celda-pendiente:hover {
-            transform: scale(1.08);
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            transform: translateY(-2px);
             z-index: 5;
-            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+            box-shadow: 0 8px 16px rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
         }
 
         .celda-no-disponible {
             background: #fafafa;
             color: #e5e7eb;
-            min-width: 65px;
-            height: 70px;
+            min-width: 70px;
+            height: 75px;
             border: 1px solid #f3f4f6;
+            border-radius: 6px;
         }
 
         .pyme-mini-logo {
-            width: 30px;
-            height: 30px;
-            object-fit: contain;
-            background: white;
-            border-radius: 4px;
-            padding: 2px;
-            margin: 0 auto 4px;
-        }
-
-        .empresa-logo-mini {
-            width: 35px;
-            height: 35px;
+            width: 36px;
+            height: 36px;
             object-fit: contain;
             background: white;
             border-radius: 6px;
-            padding: 3px;
-            margin-right: 8px;
+            padding: 4px;
+            margin: 0 auto 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .empresa-logo-mini {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 4px;
+            margin-right: 10px;
             display: inline-block;
             vertical-align: middle;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .empresa-row {
+            transition: all 0.2s ease;
+        }
+
+        .empresa-row:hover {
+            background: rgba(0,0,0,0.02);
+        }
+
+        .empresa-row:nth-child(even) {
+            background: rgba(0,0,0,0.01);
         }
 
         .modal {
@@ -489,7 +531,7 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
             // Cuerpo: Una fila por empresa (solo las activas)
             let bodyHTML = '';
             empresasActivas.forEach(empresa => {
-                bodyHTML += '<tr>';
+                bodyHTML += '<tr class="empresa-row">';
 
                 // Columna de empresa
                 const logoHTML = empresa.logo
@@ -500,8 +542,8 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                     <td class="empresa-cell sticky left-0">
                         ${logoHTML}
                         <div class="inline-block align-middle">
-                            <div class="font-bold text-sm">${empresa.nombre}</div>
-                            <div class="text-xs text-gray-300">${empresa.rubro || 'Sin rubro'}</div>
+                            <div class="font-bold text-sm leading-tight mb-1">${empresa.nombre}</div>
+                            <div class="text-xs opacity-75">${empresa.rubro || 'Sin rubro'}</div>
                         </div>
                     </td>
                 `;
@@ -515,9 +557,9 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                     if (celda.estado === 'disponible') {
                         claseEstado = 'celda-disponible';
                         celdaHTML = `
-                            <div onclick='mostrarDetalle(${JSON.stringify(celda)}, "${empresa.nombre}", ${mesa}, "${data.bloque_actual.hora_inicio}", "${data.bloque_actual.hora_fin}")'>
-                                <i class="fas fa-check text-2xl"></i>
-                                <div class="text-xs mt-1">Libre</div>
+                            <div onclick='mostrarDetalle(${JSON.stringify(celda)}, "${empresa.nombre}", ${mesa}, "${data.bloque_actual.hora_inicio}", "${data.bloque_actual.hora_fin}")' class="h-full flex flex-col items-center justify-center p-2">
+                                <i class="fas fa-check-circle text-2xl mb-1"></i>
+                                <div class="text-xs font-semibold">Disponible</div>
                             </div>
                         `;
                     } else if (celda.estado === 'confirmada' || celda.estado === 'pendiente') {
@@ -528,9 +570,9 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                             : '<i class="fas fa-user-tie text-xl mb-1"></i>';
 
                         celdaHTML = `
-                            <div onclick='mostrarDetalle(${JSON.stringify(celda)}, "${empresa.nombre}", ${mesa}, "${data.bloque_actual.hora_inicio}", "${data.bloque_actual.hora_fin}")'>
+                            <div onclick='mostrarDetalle(${JSON.stringify(celda)}, "${empresa.nombre}", ${mesa}, "${data.bloque_actual.hora_inicio}", "${data.bloque_actual.hora_fin}")' class="h-full flex flex-col items-center justify-center p-2">
                                 ${logoImg}
-                                <div class="text-xs font-semibold leading-tight">${truncate(pyme.pyme_nombre, 15)}</div>
+                                <div class="text-xs font-semibold leading-tight text-center">${truncate(pyme.pyme_nombre, 18)}</div>
                             </div>
                         `;
                     } else {
