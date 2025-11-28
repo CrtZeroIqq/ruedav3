@@ -36,6 +36,16 @@ try {
         $bloqueId = $bloques[0]['id'];
     }
 
+    // Validar que exista al menos un bloque
+    if (count($bloques) === 0) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'No hay bloques horarios configurados',
+            'mensaje' => 'Por favor configure los bloques horarios primero'
+        ]);
+        exit;
+    }
+
     // Obtener información del bloque actual
     $bloqueActual = null;
     foreach ($bloques as $bloque) {
@@ -43,6 +53,12 @@ try {
             $bloqueActual = $bloque;
             break;
         }
+    }
+
+    // Si no se encontró el bloque solicitado, usar el primero
+    if (!$bloqueActual && count($bloques) > 0) {
+        $bloqueActual = $bloques[0];
+        $bloqueId = $bloqueActual['id'];
     }
 
     // Crear matriz: [empresa_id][mesa_numero] = datos

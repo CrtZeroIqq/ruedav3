@@ -378,6 +378,11 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                     : '<?php echo BASE_URL; ?>api/get_mesas_visor.php';
 
                 const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -385,12 +390,12 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                     bloqueActualId = data.bloque_actual.id;
                     actualizarInterfaz(data);
                 } else {
-                    console.error('Error:', data.mensaje);
-                    mostrarError('Error al cargar los datos');
+                    console.error('Error API:', data.mensaje);
+                    mostrarError(data.mensaje || 'Error al cargar los datos');
                 }
             } catch (error) {
                 console.error('Error al cargar datos:', error);
-                mostrarError('Error de conexión con el servidor');
+                mostrarError('Error de conexión: ' + error.message + '\n\nVerifique que:\n- La base de datos esté configurada\n- Existan bloques horarios\n- Existan empresas registradas');
             }
         }
 
@@ -627,7 +632,21 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
 
         function mostrarError(mensaje) {
             console.error(mensaje);
-            alert(mensaje);
+
+            // Mostrar error en el contenedor de loading
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.innerHTML = `
+                <div class="py-12">
+                    <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Error al cargar datos</h3>
+                    <p class="text-gray-600 mb-4">${mensaje}</p>
+                    <button onclick="location.reload()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        <i class="fas fa-sync-alt mr-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+            loadingDiv.classList.remove('hidden');
+            document.getElementById('tabla-container').classList.add('hidden');
         }
 
         // Inicialización
