@@ -310,15 +310,15 @@ function crearReunionAdmin($datos, $pdo) {
             jsonResponse(false, 'Bloque horario no encontrado');
         }
 
-        // Verificar que no exista ya una reunión confirmada en este slot
+        // Verificar que no exista ya una reunión en este slot (cualquier estado activo)
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM reuniones
-            WHERE bloque_global_id = ? AND mesa_asignada = ? AND estado = 'confirmada'
+            WHERE bloque_global_id = ? AND mesa_asignada = ? AND estado IN ('pendiente', 'confirmada')
         ");
         $stmt->execute([$bloqueId, $mesaNumero]);
         if ($stmt->fetchColumn() > 0) {
             $pdo->rollBack();
-            jsonResponse(false, 'Ya existe una reunión confirmada en este horario/mesa');
+            jsonResponse(false, 'Ya existe una reunión en este horario/mesa');
         }
 
         // Si no existe disponibilidad para esta empresa en este bloque, crearla
@@ -435,13 +435,13 @@ function reprogramarReunion($reunionId, $datos, $pdo) {
         // Verificar que no haya conflicto
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM reuniones
-            WHERE bloque_global_id = ? AND mesa_asignada = ? AND estado = 'confirmada' AND id != ?
+            WHERE bloque_global_id = ? AND mesa_asignada = ? AND estado IN ('pendiente', 'confirmada') AND id != ?
         ");
         $stmt->execute([$nuevoBloqueId, $mesaNueva, $reunionId]);
 
         if ($stmt->fetchColumn() > 0) {
             $pdo->rollBack();
-            jsonResponse(false, 'Ya existe una reunión confirmada en ese horario/mesa');
+            jsonResponse(false, 'Ya existe una reunión en ese horario/mesa');
         }
 
         // Actualizar reunión
