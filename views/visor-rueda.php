@@ -79,12 +79,14 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
             transition: all 0.2s ease;
             min-width: 65px;
             height: 70px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
         }
 
         .celda-disponible:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
             z-index: 5;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
         }
 
         .celda-ocupada {
@@ -94,24 +96,37 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
             transition: all 0.2s ease;
             min-width: 65px;
             height: 70px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
         }
 
         .celda-ocupada:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
             z-index: 5;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
         }
 
         .celda-pendiente {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+        }
+
+        .celda-pendiente:hover {
+            transform: scale(1.08);
+            z-index: 5;
+            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
         }
 
         .celda-no-disponible {
-            background: #f3f4f6;
-            color: #9ca3af;
+            background: #fafafa;
+            color: #e5e7eb;
             min-width: 65px;
             height: 70px;
+            border: 1px solid #f3f4f6;
         }
 
         .pyme-mini-logo {
@@ -319,10 +334,10 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                     <span class="font-medium">Reunión Pendiente</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="w-10 h-10 celda-no-disponible rounded border border-gray-300 flex items-center justify-center">
-                        <i class="fas fa-times text-gray-400"></i>
+                    <div class="w-10 h-10 celda-no-disponible rounded border border-gray-200 flex items-center justify-center">
+                        <span class="text-gray-300 text-xs">—</span>
                     </div>
-                    <span class="font-medium">No Disponible</span>
+                    <span class="font-medium text-gray-500">No Disponible</span>
                 </div>
             </div>
         </div>
@@ -494,7 +509,7 @@ $fullscreen = isset($_GET['fullscreen']) ? true : false;
                             </div>
                         `;
                     } else {
-                        celdaHTML = '<i class="fas fa-times text-xl text-gray-400"></i>';
+                        celdaHTML = '<span class="text-gray-300 text-xs">—</span>';
                     }
 
                     bodyHTML += `<td class="${claseEstado}">${celdaHTML}</td>`;
