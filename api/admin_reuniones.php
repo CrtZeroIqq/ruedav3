@@ -198,9 +198,9 @@ function liberarSlot($datos, $pdo) {
         // Eliminar disponibilidad
         $stmt = $pdo->prepare("
             DELETE FROM disponibilidad_empresas
-            WHERE empresa_id = ? AND bloque_id = ?
+            WHERE empresa_id = ? AND bloque_id = ? AND mesa_numero = ?
         ");
-        $stmt->execute([$empresaId, $bloqueId]);
+        $stmt->execute([$empresaId, $bloqueId, $mesa]);
 
         $pdo->commit();
 
@@ -240,22 +240,22 @@ function asignarSlot($datos, $pdo) {
             jsonResponse(false, 'Empresa no encontrada o no es demandante');
         }
 
-        // Verificar que la empresa no tenga ya disponibilidad en este bloque
+        // Verificar que la mesa/bloque no esté ya ocupada por otra empresa
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM disponibilidad_empresas
-            WHERE empresa_id = ? AND bloque_id = ?
+            WHERE mesa_numero = ? AND bloque_id = ?
         ");
-        $stmt->execute([$empresaId, $bloqueId]);
+        $stmt->execute([$mesa, $bloqueId]);
         if ($stmt->fetchColumn() > 0) {
-            jsonResponse(false, 'La empresa ya tiene disponibilidad en este bloque');
+            jsonResponse(false, 'Esta mesa ya está asignada a otra empresa en este bloque');
         }
 
-        // Insertar disponibilidad
+        // Insertar disponibilidad con mesa_numero
         $stmt = $pdo->prepare("
-            INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, disponible)
-            VALUES (?, ?, 1)
+            INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, mesa_numero, disponible)
+            VALUES (?, ?, ?, 1)
         ");
-        $stmt->execute([$empresaId, $bloqueId]);
+        $stmt->execute([$empresaId, $bloqueId, $mesa]);
 
         jsonResponse(true, 'Slot asignado exitosamente');
 
@@ -321,20 +321,32 @@ function crearReunionAdmin($datos, $pdo) {
             jsonResponse(false, 'Ya existe una reunión en este horario/mesa');
         }
 
-        // Si no existe disponibilidad para esta empresa en este bloque, crearla
+        // Verificar si existe disponibilidad para esta empresa en este bloque/mesa
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM disponibilidad_empresas
-            WHERE empresa_id = ? AND bloque_id = ?
+            WHERE empresa_id = ? AND bloque_id = ? AND mesa_numero = ?
         ");
-        $stmt->execute([$empresaAId, $bloqueId]);
+        $stmt->execute([$empresaAId, $bloqueId, $mesaNumero]);
 
         if ($stmt->fetchColumn() == 0) {
-            // Crear disponibilidad automáticamente
+            // Verificar que la mesa/bloque no esté ocupada por otra empresa
             $stmt = $pdo->prepare("
-                INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, disponible)
-                VALUES (?, ?, 1)
+                SELECT COUNT(*) FROM disponibilidad_empresas
+                WHERE mesa_numero = ? AND bloque_id = ?
             ");
-            $stmt->execute([$empresaAId, $bloqueId]);
+            $stmt->execute([$mesaNumero, $bloqueId]);
+
+            if ($stmt->fetchColumn() > 0) {
+                $pdo->rollBack();
+                jsonResponse(false, 'La mesa ya está asignada a otra empresa en este bloque');
+            }
+
+            // Crear disponibilidad automáticamente con mesa_numero
+            $stmt = $pdo->prepare("
+                INSERT INTO disponibilidad_empresas (empresa_id, bloque_id, mesa_numero, disponible)
+                VALUES (?, ?, ?, 1)
+            ");
+            $stmt->execute([$empresaAId, $bloqueId, $mesaNumero]);
         }
 
         // Crear la reunión
